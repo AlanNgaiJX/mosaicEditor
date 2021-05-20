@@ -89,6 +89,8 @@
                 if (this.preVector.x !== null) {
                     if (this.startDistance) {
                         this.params.zoom = calcLen(v) / this.startDistance;
+                        this.params.deltaZoom =( calcLen(v) - calcLen(this.preVector) )/ this.startDistance;
+                        this.params.centerXy = {x: (point2.pageX + point.pageX) / 2, y: (point2.pageY + point.pageY) /2};
                         this._emit('pinch', e);
                     }
                     this.params.angle = calcAngle(v, this.preVector);
