@@ -14,6 +14,7 @@
     }"
   >
     <EditCanvas :page="page"></EditCanvas>
+    <PaintCanvas v-if="showPaintCanvas"></PaintCanvas>
     <pen-circle></pen-circle>
   </div>
 </template>
@@ -21,12 +22,14 @@
 <script>
 import { mapState } from "vuex";
 import EditCanvas from "@/components/editCanvas";
+import PaintCanvas from "@/components/paintCanvas";
 import PenCircle from "@/components/penCircle";
 
 export default {
   name: "editor",
   components: {
     EditCanvas,
+    PaintCanvas,
     PenCircle,
   },
   props: {
@@ -45,22 +48,16 @@ export default {
   },
   computed: {
     ...mapState(["editPannel", "mode", "util"]),
+    showPaintCanvas() {
+      return this.mode === "edit" && this.util === "masaice";
+    },
   },
   methods: {
     e_touch(e) {
-      console.log("touch");
-      if (this.mode === "edit" && this.util === "masaice") {
-        // 使用马赛克笔时
-        const { pageX, pageY } = e.touches[0];
-        this.$store.commit("setPenCircle", {
-          show: true,
-          x: pageX,
-          y: pageY,
-        });
-      }
+      console.log("touch editor");
     },
     e_tap() {
-      console.log("tap");
+      console.log("tap editor");
     },
     e_slide(e, params, el) {
       // 在预览或者挪动工具中可挪动画布
@@ -74,14 +71,6 @@ export default {
         this.$store.commit("changeEditPannel", {
           x: this.editPannel.x + deltaX,
           y: this.editPannel.y + deltaY,
-        });
-      } else if (this.mode === "edit" && this.util === "masaice") {
-        // 使用马赛克笔时
-        const { pageX, pageY } = e.touches[0];
-        this.$store.commit("setPenCircle", {
-          show: true,
-          x: pageX,
-          y: pageY,
         });
       }
     },
@@ -125,16 +114,7 @@ export default {
         mouseXy: center,
       });
     },
-    e_finish() {
-      if (this.mode === "edit" && this.util === "masaice") {
-        // 使用马赛克笔时
-        this.$store.commit("setPenCircle", {
-          show: false,
-          x: 0,
-          y: 0,
-        });
-      }
-    },
+    e_finish() {},
   },
 };
 </script>

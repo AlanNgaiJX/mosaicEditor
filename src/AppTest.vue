@@ -122,7 +122,7 @@ export default {
       const cG = this.imageData.data[(y * this.imageData.width + x) * 4 + 1];
       const cB = this.imageData.data[(y * this.imageData.width + x) * 4 + 2];
       const cA = this.imageData.data[(y * this.imageData.width + x) * 4 + 3];
-      return `rgb(${cR},${cG},${cB}, ${cA})`;
+      return `rgba(${cR},${cG},${cB}, ${cA})`;
     },
   },
   mounted() {

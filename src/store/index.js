@@ -27,15 +27,64 @@ export default new Vuex.Store({
       w: 0,
       h: 0,
       lock: true,
+      wrap: {
+        x: 0,
+        y: 0,
+        w: 0,
+        h: 0,
+      },
       cacheStartStatus: {},
     },
     // 笔触
-    penCircle:{
+    penCircle: {
       show: false,
       x: 0,
       y: 0,
-      size: 25
-    }
+      size: 1,
+      basicSize: 0,
+      basicPercent: 0.01,
+      id: 2,
+    },
+    paintStep: {
+      isOn: false,
+      index: -1,
+      queue: [],
+    },
+  },
+  getters: {
+    // 【 屏幕坐标转换为 canvas 图片坐标 】
+    getOriginXy(state) {
+      return function(pagePoint) {
+        const { pageX, pageY } = pagePoint;
+        const {
+          x: wrap_x,
+          y: wrap_y,
+          w: wrap_w,
+          h: wrap_h,
+        } = state.editPannel.wrap;
+        const { x, y, w, h, scale } = state.editPannel;
+
+        const imgBox = state.currPage.pageData.imgBoxList[0];
+        const {
+          width: box_w,
+          height: box_h,
+          originWidth: box_ow,
+          originHeight: box_oh,
+        } = imgBox;
+
+        const scaleRatio = box_ow / box_w;
+
+        // 假设这就是屏幕图片的x y
+        const simg_x = (pageX - wrap_x - x) / scale;
+        const simg_y = (pageY - wrap_y - y) / scale;
+
+        // 那么在图片上的位置为
+        const originX = simg_x * scaleRatio;
+        const originY = simg_y * scaleRatio;
+
+        return { originX, originY };
+      };
+    },
   },
   mutations: {
     // 【 初始化 pages 】
@@ -57,11 +106,6 @@ export default new Vuex.Store({
     // 【 设置工具 移动 or 马赛克】
     setUtil(state, { util }) {
       state.util = util;
-    },
-
-    //  【 设置笔触大小 】
-    setPenSize(state, penSize){
-
     },
 
     // 【 设置editPannel 】
@@ -139,9 +183,74 @@ export default new Vuex.Store({
     },
 
     // 【 设置笔触 】
-    setPenCircle(state, data){
+    setPenCircle(state, data) {
       Object.assign(state.penCircle, data);
-    }
+    },
+
+    // 【 重绘 imgBox 】
+    reRenderImgBox(state, { src }) {
+      state.currPage.pageData.imgBoxList[0].src = src;
+    },
+
+    // 【 重置 imgBox 】
+    resetImgBox(state) {
+      const { canvas, imageData } = state.currPage.pageData.imgBoxList[0];
+      const ctx = canvas.getContext("2d");
+      ctx.putImageData(imageData, 0, 0);
+      this.commit("reRenderImgBox", { src: canvas.toDataURL() });
+    },
+
+    // 【 初始化 paintStep】
+    initPaintStep(state) {
+      state.paintStep.queue = [];
+      state.paintStep.index = -1;
+      state.paintStep.isOn = true;
+      state.paintStep.queue.push(
+        state.currPage.pageData.imgBoxList[0].imageData
+      );
+      state.paintStep.index = 0;
+    },
+
+    // 【 增步 】
+    addPaintStep(state) {
+      const canvas = state.currPage.pageData.imgBoxList[0].canvas;
+      const ctx = canvas.getContext("2d");
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      state.paintStep.queue.push(imageData);
+      state.paintStep.index = state.paintStep.queue.length - 1;
+    },
+
+    // 【 撤销步骤 】
+    undoStep(state) {
+      const index = state.paintStep.index;
+      const imageData = state.paintStep.queue[index - 1];
+      state.paintStep.index = index - 1;
+
+      const canvas = state.currPage.pageData.imgBoxList[0].canvas;
+      const ctx = canvas.getContext("2d");
+      ctx.putImageData(imageData, 0, 0);
+      this.commit("reRenderImgBox", { src: canvas.toDataURL() });
+    },
+
+    // 【 重做步骤 】
+    redoStep(state) {
+      const index = state.paintStep.index;
+      const imageData = state.paintStep.queue[index + 1];
+      state.paintStep.index = index + 1;
+
+      const canvas = state.currPage.pageData.imgBoxList[0].canvas;
+      const ctx = canvas.getContext("2d");
+      ctx.putImageData(imageData, 0, 0);
+      this.commit("reRenderImgBox", { src: canvas.toDataURL() });
+    },
+
+    // 【 销毁（重置）步骤管理 】
+    destroyPintStep(state) {
+      state.paintStep.queue = [];
+      state.paintStep.index = -1;
+      state.paintStep.isOn = false;
+    },
   },
   actions: {},
   modules: {},

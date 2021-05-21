@@ -1,5 +1,9 @@
 <template>
-  <div id="editCanvas" ref="editCanvas" :style="editCanvasStyle">
+  <div
+    id="editCanvas"
+    ref="editCanvas"
+    :style="editCanvasStyle"
+  >
     <Page :page="page"></Page>
   </div>
 </template>
@@ -20,7 +24,7 @@ export default {
     },
   },
   computed: {
-    ...mapState(["editPannel"]),
+    ...mapState(["editPannel", "mode", "util"]),
     editCanvasStyle() {
       const { w, h, x, y, scale } = this.editPannel;
       return {
@@ -29,7 +33,7 @@ export default {
         transform: `translate(${x}px, ${y}px) scale(${scale})`,
       };
     },
-  },
+  }
 };
 </script>
 

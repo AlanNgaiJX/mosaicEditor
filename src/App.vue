@@ -8,8 +8,12 @@
     <!-- 编辑模式下 -->
     <div class="head-bar mode-edit" v-if="mode === 'edit'">
       <div class="left">
-        <div class="btn-undo" @click="undo"></div>
-        <div class="btn-redo" @click="redo"></div>
+        <div class="steps" v-if="paintStep.isOn">
+          <div class="btn-undo" @click="undo" v-show="canUndo"></div>
+          <div class="btn-undo-tp" v-show="!canUndo"></div>
+          <div class="btn-redo" @click="redo" v-show="canRedo"></div>
+          <div class="btn-undo-tp" v-show="!canRedo"></div>
+        </div>
       </div>
       <div class="mid"></div>
       <div class="right">
@@ -27,7 +31,7 @@
       <ul class="image-list" v-if="mode === 'preview'">
         <li
           class="image-item"
-          :class="{ active: false }"
+          :class="{ active: currPage.id === item.id }"
           v-for="item in pages"
           :key="item.id"
           @click="choosePage(item)"
@@ -55,14 +59,25 @@ export default {
   },
   data() {
     return {
-      mainPannelEl: null
+      mainPannelEl: null,
     };
   },
   computed: {
-    ...mapState(["pages", "currPage", "mode"]),
+    ...mapState(["pages", "currPage", "mode", "util", "paintStep"]),
+    canUndo() {
+      return this.paintStep.isOn && this.paintStep.index > 0;
+    },
+    canRedo() {
+      return (
+        this.paintStep.isOn &&
+        this.paintStep.index < this.paintStep.queue.length - 1
+      );
+    },
   },
   methods: {
     init() {
+      this.initEditPannel();
+
       const pages = [
         {
           id: 1,
@@ -86,9 +101,7 @@ export default {
         this.initPages(pages);
       }
 
-      this.mainPannelEl = this.$refs["main-pannel"];
-
-      this.$store.commit("setMode", { mode: "edit" });
+      this.$store.commit("setMode", { mode: "preview" });
     },
     choosePage(page) {
       this.$store.commit("setCurrPage", { currPage: page });
@@ -107,7 +120,7 @@ export default {
           originHeight: 0,
           canvas: null,
           imageData: null,
-          src: item.image_url,
+          src: "",
         };
         const pageData = {
           width: 0,
@@ -134,6 +147,7 @@ export default {
 
           // 若过载，调小点
           if (o > 1) {
+            console.log("图片超200万像素，过载，将调小");
             o = Math.sqrt(o);
             w /= o;
             h /= o;
@@ -148,7 +162,8 @@ export default {
           const tCanvas = document.createElement("canvas");
           const tctx = tCanvas.getContext("2d");
 
-          if (o > 1) {
+          if ((count = (w * h) / 1000000) > 1) {
+            console.log("图片超100万像素，瓦片绘制");
             count = ~~(Math.sqrt(count) + 1);
             const nw = ~~(w / count);
             const nh = ~~(h / count);
@@ -158,10 +173,10 @@ export default {
               for (let j = 0; j < count; j++) {
                 tctx.drawImage(
                   img,
-                  i * nw * ratio,
-                  j * nh * ratio,
-                  nw * ratio,
-                  nh * ratio,
+                  i * nw * o,
+                  j * nh * o,
+                  nw * o,
+                  nh * o,
                   0,
                   0,
                   nw,
@@ -175,6 +190,7 @@ export default {
           }
 
           imgBox.canvas = canvas;
+          imgBox.src = canvas.toDataURL();
           imgBox.imageData = context.getImageData(
             0,
             0,
@@ -217,20 +233,52 @@ export default {
           if (isAllInited()) {
             console.log("全部加载好了");
             this.$store.commit("setPages", { pages });
-            this.$store.commit("setCurrPage", { currPage: pages[0] });
+            this.choosePage(pages[0]);
           }
         };
       });
     },
+    initEditPannel() {
+      this.mainPannelEl = this.$refs["main-pannel"];
+      setTimeout(() => {
+        const {
+          offsetWidth,
+          offsetHeight,
+          offsetTop,
+          offsetLeft,
+        } = this.mainPannelEl;
+        this.$store.commit("changeEditPannel", {
+          wrap: {
+            x: offsetLeft,
+            y: offsetTop,
+            w: offsetWidth,
+            h: offsetHeight,
+          },
+        });
+        console.log(offsetWidth, offsetHeight, offsetTop, offsetLeft);
+      }, 0);
+    },
     edit() {
       this.$store.commit("setMode", { mode: "edit" });
     },
-    save() {},
+    save() {
+      this.$store.commit("setMode", { mode: "preview" });
+      this.$store.commit("setUtil", { util: "resize" });
+      this.$store.commit("resetPannel");
+      const canvas = this.currPage.pageData.imgBoxList[0].canvas;
+    },
     cancle() {
       this.$store.commit("setMode", { mode: "preview" });
+      this.$store.commit("setUtil", { util: "resize" });
+      this.$store.commit("resetPannel");
+      this.$store.commit("resetImgBox");
     },
-    undo() {},
-    redo() {}
+    undo() {
+      this.$store.commit("undoStep");
+    },
+    redo() {
+      this.$store.commit("redoStep");
+    },
   },
   mounted() {
     this.init();
@@ -276,23 +324,34 @@ export default {
         display: flex;
         align-items: center;
 
-        .btn-undo {
-          width: 0.6rem;
-          height: 0.6rem;
-          background-image: url("~@/assets/icon/icon-undo-default.png");
-          background-repeat: no-repeat;
-          background-size: 65%;
-          background-position: center;
-        }
+        .steps {
+          display: flex;
+          align-items: center;
 
-        .btn-redo {
-          width: 0.6rem;
-          height: 0.6rem;
-          background-image: url("~@/assets/icon/icon-redo-default.png");
-          background-repeat: no-repeat;
-          background-size: 65%;
-          background-position: center;
-          margin-left: 0.2rem;
+          .btn-undo {
+            width: 0.6rem;
+            height: 0.6rem;
+            background-image: url("~@/assets/icon/icon-undo-default.png");
+            background-repeat: no-repeat;
+            background-size: 65%;
+            background-position: center;
+          }
+
+          .btn-redo {
+            width: 0.6rem;
+            height: 0.6rem;
+            background-image: url("~@/assets/icon/icon-redo-default.png");
+            background-repeat: no-repeat;
+            background-size: 65%;
+            background-position: center;
+            margin-left: 0.2rem;
+          }
+
+          .btn-undo-tp,
+          btn-redo-tp {
+            width: 0.6rem;
+            height: 0.6rem;
+          }
         }
       }
 

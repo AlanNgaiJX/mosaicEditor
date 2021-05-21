@@ -9,8 +9,8 @@
           <li
             v-for="item in penSizeList"
             :key="item.id"
-            :class="{ active: item.id === currPenSize }"
-            @click="setPenSize(item.id)"
+            :class="{ active: item.id === penCircle.id }"
+            @click="setPenSize(item.id, item.size)"
           ></li>
         </ul>
         <div class="icon-pen"></div>
@@ -46,25 +46,30 @@ export default {
   data() {
     return {
       penSizeList: [
-        { id: 1, size: 5 },
-        { id: 2, size: 10 },
-        { id: 3, size: 15 },
-        { id: 4, size: 20 },
-        { id: 5, size: 25 },
+        { id: 1, size: 1 },
+        { id: 2, size: 1.5 },
+        { id: 3, size: 2 },
+        { id: 4, size: 2.5 },
+        { id: 5, size: 3 },
       ],
       currPenSize: 1,
     };
   },
   computed: {
-    ...mapState(["util"]),
+    ...mapState(["util", "penCircle"]),
   },
   methods: {
-    setPenSize(id) {
-      this.currPenSize = id;
+    setPenSize(id, size) {
+      this.$store.commit("setPenCircle", { id, size });
     },
     chooseUtil(util) {
       this.$store.commit("setUtil", { util });
     },
+  },
+  mounted() {
+    const pen = this.penSizeList[2];
+    const { id, size } = pen;
+    this.setPenSize(id, size);
   },
 };
 </script>

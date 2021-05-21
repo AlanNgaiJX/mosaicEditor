@@ -29,8 +29,7 @@ export default {
   methods: {
   },
   mounted(){
-    // this.$refs['imgContent'].appendChild(this.imgBox.canvas)
-    // console.log(this.imgBox.canvas);
+    console.log(this.imgBox);
   }
 };
 </script>
