@@ -1,7 +1,8 @@
 <template>
-  <div class="masaice_editor">
+  <div class="mosaic_editor">
     <!-- 预览模式下 -->
     <div class="head-bar mode-preview" v-if="mode === 'preview'">
+      <div class="btn btn-back" @click="back">返回</div>
       <div class="btn btn-edit" @click="edit">编辑</div>
     </div>
 
@@ -47,18 +48,20 @@
 </template>
 
 <script>
-import Editor from "@/components/editor.vue";
-import EditSidebar from "@/components/editSidebar.vue";
 import { mapState } from "vuex";
 
+import Editor from "@/components/editor.vue";
+import EditSidebar from "@/components/editSidebar.vue";
+
 export default {
-  name: "masaiceEditor",
+  name: "mosaicEditor",
   components: {
     Editor,
     EditSidebar,
   },
   data() {
     return {
+      used_car_id: null,
       mainPannelEl: null,
     };
   },
@@ -77,25 +80,28 @@ export default {
   methods: {
     init() {
       this.initEditPannel();
-
-      const pages = [
-        {
-          id: 1,
-          image_url: require("@/assets/carTest/1.png"),
-        },
-        {
-          id: 2,
-          image_url: require("@/assets/carTest/2.jpg"),
-        },
-        {
-          id: 3,
-          image_url: require("@/assets/carTest/3.png"),
-        },
-        {
-          id: 4,
-          image_url: require("@/assets/carTest/4.jpg"),
-        },
-      ];
+      const images = [{
+        id: 1,
+        image_url: require("@/assets/carTest/1.png")
+      },{
+        id: 2,
+        image_url: require("@/assets/carTest/2.jpg")
+      },{
+        id: 3,
+        image_url: require("@/assets/carTest/3.png")
+      },
+      {
+        id: 4,
+        image_url: require("@/assets/carTest/4.jpg")
+      }]
+      
+      const pages = images
+        .map((item) => {
+          return {
+            image_url: item.image_url,
+            id: item.id,
+          };
+        });
 
       if (pages.length) {
         this.initPages(pages);
@@ -112,7 +118,6 @@ export default {
       }
       pages.forEach((item) => {
         const img = new Image();
-
         const imgBox = {
           width: 0,
           height: 0,
@@ -129,8 +134,9 @@ export default {
           masaiceBoxList: [],
         };
 
-        img.src = item.image_url;
+        // 注意 crossOrigin 一定要放在 src 前，否则在移动端会跨域失败
         img.crossOrigin = "*";
+        img.src = item.image_url;
 
         img.onload = (e) => {
           let w = img.width;
@@ -145,9 +151,9 @@ export default {
           const canvas = document.createElement("canvas");
           const context = canvas.getContext("2d");
 
-          // 若过载，调小点
+          // 图片超200万像素，过载，将调小
           if (o > 1) {
-            console.log("图片超200万像素，过载，将调小");
+            // console.log("图片超200万像素，过载，将调小");
             o = Math.sqrt(o);
             w /= o;
             h /= o;
@@ -162,8 +168,9 @@ export default {
           const tCanvas = document.createElement("canvas");
           const tctx = tCanvas.getContext("2d");
 
+          // 图片超100万像素，瓦片绘制
           if ((count = (w * h) / 1000000) > 1) {
-            console.log("图片超100万像素，瓦片绘制");
+            // console.log("图片超100万像素，瓦片绘制");
             count = ~~(Math.sqrt(count) + 1);
             const nw = ~~(w / count);
             const nh = ~~(h / count);
@@ -209,8 +216,6 @@ export default {
           if (w > h) {
             pageData.width = imgBox.width = editorW;
             pageData.height = imgBox.height = editorW / ratio;
-            // pageData.x = 0;
-            // pageData.y = (editorH - editorW / ratio) / 2;
           } else {
             const assumedHeight = editorH;
             const assumedWidth = assumedHeight * ratio;
@@ -218,13 +223,9 @@ export default {
             if (assumedWidth > editorW) {
               pageData.width = imgBox.width = editorW;
               pageData.height = imgBox.height = editorW / ratio;
-              // pageData.x = 0;
-              // pageData.y = (editorH - editorW / ratio) / 2;
             } else {
               pageData.height = imgBox.height = assumedHeight;
               pageData.width = imgBox.width = assumedWidth;
-              // pageData.x = (editorW - assumedWidth) / 2;
-              // pageData.y = 0;
             }
           }
           pageData.imgBoxList.push(imgBox);
@@ -255,7 +256,6 @@ export default {
             h: offsetHeight,
           },
         });
-        console.log(offsetWidth, offsetHeight, offsetTop, offsetLeft);
       }, 0);
     },
     edit() {
@@ -265,7 +265,43 @@ export default {
       this.$store.commit("setMode", { mode: "preview" });
       this.$store.commit("setUtil", { util: "resize" });
       this.$store.commit("resetPannel");
+
       const canvas = this.currPage.pageData.imgBoxList[0].canvas;
+      const dataURI = canvas.toDataURL("image/jpeg", 1);
+      if (dataURI) {
+        let byteString;
+        if (dataURI.split(",")[0].indexOf("base64") >= 0)
+          //base64 解码
+          byteString = atob(dataURI.split(",")[1]);
+        else {
+          byteString = unescape(dataURI.split(",")[1]);
+        }
+        //mime类型 -- image/png
+        const mimeString = dataURI
+          .split(",")[0]
+          .split(":")[1]
+          .split(";")[0];
+
+        const ia = new Uint8Array(byteString.length); //创建视图
+        for (let k = 0; k < byteString.length; k++) {
+          ia[k] = byteString.charCodeAt(k);
+        }
+        const blob = new Blob([ia], {
+          type: mimeString,
+        });
+
+        // // 将 blob 转回 base64 就可以验证一下结果
+        // const blobToDataURL = (blob, callback) => {
+        //   let a = new FileReader();
+        //   a.onload = function(e) {
+        //     console.log(e.target.result);
+        //   };
+        //   a.readAsDataURL(blob);
+        // };
+        // blobToDataURL(blob);
+      } else {
+        console.log("保存失败，无法绘制");
+      }
     },
     cancle() {
       this.$store.commit("setMode", { mode: "preview" });
@@ -279,15 +315,22 @@ export default {
     redo() {
       this.$store.commit("redoStep");
     },
+    back(){
+      this.$router.go(-1);
+    }
   },
   mounted() {
     this.init();
+  },
+  destroyed() {
+    // 重置store
+    this.$store.commit("destoryEditor");
   },
 };
 </script>
 
 <style lang="scss">
-.masaice_editor {
+.mosaic_editor {
   .head-bar {
     height: 0.8rem;
     position: fixed;
@@ -311,9 +354,12 @@ export default {
     }
 
     &.mode-preview {
-      justify-content: flex-end;
+      justify-content: space-between;
+      
 
-      .btn-edit {
+      .btn-back {
+        background-color: #ccc;
+        color: #fff;
       }
     }
 
@@ -331,7 +377,7 @@ export default {
           .btn-undo {
             width: 0.6rem;
             height: 0.6rem;
-            background-image: url("~@/assets/icon/icon-undo-default.png");
+            background-image: url("~@/assets/icon-undo-default.png");
             background-repeat: no-repeat;
             background-size: 65%;
             background-position: center;
@@ -340,7 +386,7 @@ export default {
           .btn-redo {
             width: 0.6rem;
             height: 0.6rem;
-            background-image: url("~@/assets/icon/icon-redo-default.png");
+            background-image: url("~@/assets/icon-redo-default.png");
             background-repeat: no-repeat;
             background-size: 65%;
             background-position: center;
@@ -362,7 +408,7 @@ export default {
         .btn-cancle {
           width: 0.6rem;
           height: 0.6rem;
-          background-image: url("~@/assets/icon/icon-cancle.png");
+          background-image: url("~@/assets/icon-cancle.png");
           background-repeat: no-repeat;
           background-size: 65%;
           background-position: center;

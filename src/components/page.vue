@@ -34,24 +34,6 @@ export default {
       };
     },
   },
-  methods:{
-    e_touch(){
-      console.log("touch");
-    },
-    e_tap(){
-      console.log("tap");
-    },
-    e_slide(e, params, el){
-      console.log("slide");
-      console.log(params);
-    },
-    e_pinch(){
-      console.log("pinch");
-    },
-    e_finish(){
-      console.log("finish");
-    }
-  }
 };
 </script>
 <style lang="scss">

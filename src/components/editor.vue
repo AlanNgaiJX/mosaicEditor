@@ -49,7 +49,7 @@ export default {
   computed: {
     ...mapState(["editPannel", "mode", "util"]),
     showPaintCanvas() {
-      return this.mode === "edit" && this.util === "masaice";
+      return this.mode === "edit" && this.util === "mosaic";
     },
   },
   methods: {
@@ -75,7 +75,7 @@ export default {
       }
     },
     e_pinch(e, params, el, initscale) {
-      if (this.mode === "preview" || this.util === "masaice") {
+      if (this.mode === "preview" || this.util === "mosaic") {
         // 限制预览和马赛克笔时不给双指缩放
         return;
       }

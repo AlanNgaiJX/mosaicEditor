@@ -26,11 +26,6 @@ export default {
       };
     },
   },
-  methods: {
-  },
-  mounted(){
-    console.log(this.imgBox);
-  }
 };
 </script>
 

@@ -9,7 +9,16 @@
       slide,
       finish,
     }"
-  ></div>
+  >
+    <canvas
+      ref="chir"
+      :width="editPannel.w"
+      :height="editPannel.h"
+      :style="{
+        opacity: 0.6,
+      }"
+    ></canvas>
+  </div>
 </template>
 
 <script>
@@ -21,13 +30,20 @@ export default {
     return {
       canvas: null,
       ctx: null,
-      imageData: null,
+      chirCanvas: null,
+      chirCtx: null,
       lastX: 0,
       lastY: 0,
     };
   },
   computed: {
-    ...mapState(["editPannel", "mode", "util", "currPage", "penCircle"]),
+    ...mapState([
+      "editPannel",
+      "mode",
+      "util",
+      "currPage",
+      "penCircle",
+    ]),
     paintCanvasStyle() {
       const { w, h, x, y, scale } = this.editPannel;
       return {
@@ -39,22 +55,13 @@ export default {
   },
   methods: {
     initContext() {
-      const { canvas, imageData } = this.currPage.pageData.imgBoxList[0];
+      const { canvas } = this.currPage.pageData.imgBoxList[0];
       this.canvas = canvas;
       this.ctx = canvas.getContext("2d");
-      this.imageData = imageData;
       this.$store.commit("initPaintStep");
-    },
-    initPen() {
-      const basicPercent = this.penCircle.basicPercent;
-      const {
-        originWidth,
-        originHeight,
-      } = this.currPage.pageData.imgBoxList[0];
-      const maxWidth = Math.max(originWidth, originHeight);
-      this.$store.commit("setPenCircle", {
-        basicSize: maxWidth * basicPercent,
-      });
+
+      this.chirCanvas = this.$refs["chir"];
+      this.chirCtx = this.chirCanvas.getContext("2d");
     },
     touch(e) {
       // 使用马赛克笔时
@@ -65,14 +72,16 @@ export default {
         y: pageY,
       });
 
-      const { originX, originY } = this.$store.getters["getOriginXy"]({
+      const { originX, originY, sX, sY } = this.$store.getters["getXy"]({
         pageX,
         pageY,
       });
       this.lastX = originX;
       this.lastY = originY;
 
-      this.draw({ x: originX, y: originY, start: true });
+      this.draw({ x: originX, y: originY });
+
+      this.startChir(sX, sY);
     },
     slide(e, params) {
       // 使用马赛克笔时
@@ -82,12 +91,14 @@ export default {
         x: pageX,
         y: pageY,
       });
-      const { originX, originY } = this.$store.getters["getOriginXy"]({
+      const { originX, originY, sX, sY } = this.$store.getters["getXy"]({
         pageX,
         pageY,
       });
 
       this.draw({ x: originX, y: originY });
+
+      this.drawChir(sX, sY);
     },
     finish() {
       // 使用马赛克笔时
@@ -101,33 +112,47 @@ export default {
 
       this.$store.commit("addPaintStep");
       this.reRenderImgBox();
+
+      this.closeChir();
     },
-    draw({ x, y, start }) {
-      const { basicSize, size } = this.penCircle;
-      const mosaiceSize = basicSize * size;
+    draw({ x, y }) {
+      const basic = 0.01;
+      const imgBox = this.currPage.pageData.imgBoxList[0];
+      const { originWidth, originHeight } = imgBox;
+      const maxLength = Math.max(originWidth, originHeight);
+      const singleLength = maxLength * basic;
 
-      const drawAMasaice = () => {
-        this.ctx.fillStyle = this.getPixelColor(x, y).rgba;
-        this.ctx.fillRect(
-          x - mosaiceSize / 2,
-          y - mosaiceSize / 2,
-          mosaiceSize,
-          mosaiceSize
-        );
-        this.lastX = x;
-        this.lastY = y;
-      };
+      const drawByPenSize = (penSize) => {
+        // 中心点
+        const x_n = Math.floor(x / singleLength);
+        const y_n = Math.floor(y / singleLength);
+        const mosaic_x = x_n * singleLength;
+        const mosaic_y = y_n * singleLength;
 
-      if (start) {
-        drawAMasaice();
-      } else {
-        if (
-          Math.abs(x - this.lastX) >= mosaiceSize ||
-          Math.abs(y - this.lastY) >= mosaiceSize
-        ) {
-          drawAMasaice();
+        if (penSize > 1) {
+          // 左上角
+          const n_start = penSize - 1;
+          const startX = mosaic_x - n_start * singleLength;
+          const startY = mosaic_y - n_start * singleLength;
+
+          // 右上角
+          const n_end = penSize;
+          const endX = mosaic_x + n_end * singleLength;
+          const endY = mosaic_y + n_end * singleLength;
+
+          // 整个区域画马赛克
+          for (let x = startX; x < endX; x += singleLength) {
+            for (let y = startY; y < endY; y += singleLength) {
+              this.ctx.fillStyle = this.getPixelColor(x, y).rgba;
+              this.ctx.fillRect(x, y, singleLength, singleLength);
+            }
+          }
+        } else {
+          this.ctx.fillStyle = this.getPixelColor(x, y).rgba;
+          this.ctx.fillRect(mosaic_x, mosaic_y, singleLength, singleLength);
         }
-      }
+      };
+      drawByPenSize(this.penCircle.size);
     },
     getPixelColor(x, y) {
       var imageData = this.ctx.getImageData(x, y, 1, 1);
@@ -144,7 +169,7 @@ export default {
       var bHex = b.toString(16);
       b < 16 && (bHex = "0" + bHex);
       // var rgbaColor = "rgba(" + r + "," + g + "," + b + "," + a + ")";
-      var rgbaColor = "rgba(" + r + "," + g + "," + b + "," + 0.85 + ")";
+      var rgbaColor = "rgba(" + r + "," + g + "," + b + "," + 0.9 + ")";
       var rgbColor = "rgb(" + r + "," + g + "," + b + ")";
       var hexColor = "#" + rHex + gHex + bHex;
       return {
@@ -161,10 +186,33 @@ export default {
       const base64 = this.canvas.toDataURL();
       this.$store.commit("reRenderImgBox", { src: base64 });
     },
+    // 【 开始路径 】
+    startChir(sX, sY) {
+      this.chirCtx.strokeStyle = "#ffaa40";
+      this.chirCtx.lineWidth = 5 * (this.penCircle.size * 2 - 1);
+      this.chirCtx.lineCap = "round"; // 线条末端添加圆形线帽，减少线条的生硬感
+      this.chirCtx.lineJoin = "round"; // 线条交汇时为原型边角
+      this.chirCtx.beginPath();
+      this.chirCtx.moveTo(sX, sY);
+      this.chirCtx.stroke();
+    },
+    // 【 实时绘制路径 】
+    drawChir(sX, sY) {
+      this.chirCtx.lineTo(sX, sY);
+      this.chirCtx.stroke();
+    },
+    closeChir() {
+      this.chirCtx.closePath();
+      this.chirCtx.clearRect(
+        0,
+        0,
+        this.chirCanvas.width,
+        this.chirCanvas.height
+      );
+    },
   },
   mounted() {
     this.initContext();
-    this.initPen();
   },
   beforeDestroy() {
     this.$store.commit("destroyPintStep");

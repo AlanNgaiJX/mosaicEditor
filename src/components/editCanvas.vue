@@ -1,9 +1,5 @@
 <template>
-  <div
-    id="editCanvas"
-    ref="editCanvas"
-    :style="editCanvasStyle"
-  >
+  <div id="editCanvas" ref="editCanvas" :style="editCanvasStyle">
     <Page :page="page"></Page>
   </div>
 </template>
@@ -33,7 +29,7 @@ export default {
         transform: `translate(${x}px, ${y}px) scale(${scale})`,
       };
     },
-  }
+  },
 };
 </script>
 

@@ -4,7 +4,7 @@
       <div class="tips-pannel" v-show="util === 'resize'">
         双指缩放，单指挪动
       </div>
-      <div class="pen-size-pannel" v-show="util === 'masaice'">
+      <div class="pen-size-pannel" v-show="util === 'mosaic'">
         <ul class="size-list">
           <li
             v-for="item in penSizeList"
@@ -27,11 +27,11 @@
           <div class="text">移动/放大</div>
         </li>
         <li
-          class="sidebar-item masaice"
-          :class="{ active: util === 'masaice' }"
-          @click="chooseUtil('masaice')"
+          class="sidebar-item mosaic"
+          :class="{ active: util === 'mosaic' }"
+          @click="chooseUtil('mosaic')"
         >
-          <div class="icon icon-masaice"></div>
+          <div class="icon icon-mosaic"></div>
           <div class="text">马赛克</div>
         </li>
       </ul>
@@ -47,12 +47,9 @@ export default {
     return {
       penSizeList: [
         { id: 1, size: 1 },
-        { id: 2, size: 1.5 },
-        { id: 3, size: 2 },
-        { id: 4, size: 2.5 },
-        { id: 5, size: 3 },
+        { id: 2, size: 2 },
+        { id: 3, size: 3 },
       ],
-      currPenSize: 1,
     };
   },
   computed: {
@@ -67,7 +64,7 @@ export default {
     },
   },
   mounted() {
-    const pen = this.penSizeList[2];
+    const pen = this.penSizeList[1];
     const { id, size } = pen;
     this.setPenSize(id, size);
   },
@@ -103,7 +100,7 @@ export default {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        width: 4.5rem;
+        width: 2.5rem;
 
         li {
           width: 0.4rem;
@@ -122,7 +119,7 @@ export default {
             background-color: #ccc;
           }
 
-          &:nth-child(-n + 4) {
+          &:nth-child(-n + 2) {
             &::after {
               content: "";
               display: block;
@@ -165,26 +162,6 @@ export default {
             }
           }
 
-          &:nth-child(4) {
-            &:before {
-              width: 0.35rem;
-              height: 0.35rem;
-            }
-            &:after {
-              left: 0.35rem;
-            }
-          }
-
-          &:nth-child(5) {
-            &:before {
-              width: 0.4rem;
-              height: 0.4rem;
-            }
-            &:after {
-              left: 0.4rem;
-            }
-          }
-
           &.active {
             &::before {
               background-color: #409eff;
@@ -196,7 +173,7 @@ export default {
       .icon-pen {
         width: 0.6rem;
         height: 0.6rem;
-        background-image: url("~@/assets/icon/icon-pen.png");
+        background-image: url("~@/assets/icon-pen.png");
         background-size: contain;
         background-repeat: no-repeat;
         background-position: center;
@@ -238,11 +215,11 @@ export default {
           background-repeat: no-repeat;
 
           &.icon-resize {
-            background-image: url("~@/assets/icon/icon-resize.png");
+            background-image: url("~@/assets/icon-resize.png");
           }
 
-          &.icon-masaice {
-            background-image: url("~@/assets/icon/icon-masaice.png");
+          &.icon-mosaic {
+            background-image: url("~@/assets/icon-mosaic.png");
           }
         }
 
@@ -255,11 +232,11 @@ export default {
 
           .icon {
             &.icon-resize {
-              background-image: url("~@/assets/icon/icon-resize-active.png");
+              background-image: url("~@/assets/icon-resize-active.png");
             }
 
-            &.icon-masaice {
-              background-image: url("~@/assets/icon/icon-masaice-active.png");
+            &.icon-mosaic {
+              background-image: url("~@/assets/icon-mosaic-active.png");
             }
           }
 
