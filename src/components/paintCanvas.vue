@@ -5,6 +5,7 @@
     ref="paintCanvas"
     :style="paintCanvasStyle"
     v-Gesture.stop="{
+      init: initGesture,
       touch,
       slide,
       finish,
@@ -28,6 +29,7 @@ export default {
   name: "paintCanvas",
   data() {
     return {
+      gesture: null,
       canvas: null,
       ctx: null,
       chirCanvas: null,
@@ -37,13 +39,7 @@ export default {
     };
   },
   computed: {
-    ...mapState([
-      "editPannel",
-      "mode",
-      "util",
-      "currPage",
-      "penCircle",
-    ]),
+    ...mapState(["editPannel", "mode", "util", "currPage", "penCircle"]),
     paintCanvasStyle() {
       const { w, h, x, y, scale } = this.editPannel;
       return {
@@ -62,6 +58,9 @@ export default {
 
       this.chirCanvas = this.$refs["chir"];
       this.chirCtx = this.chirCanvas.getContext("2d");
+    },
+    initGesture(gesture) {
+      this.gesture = gesture;
     },
     touch(e) {
       // 使用马赛克笔时
@@ -215,6 +214,7 @@ export default {
     this.initContext();
   },
   beforeDestroy() {
+    this.gesture.destroy();
     this.$store.commit("destroyPintStep");
   },
 };

@@ -34,6 +34,9 @@
         this.distance = 30;
         this.stopPropagation = false;
         this.preventDefault = false;
+        this.longtapTime = 0;
+        this.longTapTimeout = null;
+        this.tapTimeout = null;
         this._touch = this._touch.bind(this);
         this._move = this._move.bind(this);
         this._end = this._end.bind(this);
@@ -63,10 +66,9 @@
                 this.startDistance = calcLen(this.preVector);
                 this._emit('multitouch', e);
             } else {
-                var self = this;
-                this.longTapTimeout = setTimeout(function () {
-                    self._emit('longtap', e);
-                    self.doubleTap = false;
+                this.longTapTimeout = setTimeout( ()=> {
+                    this._emit('longtap', e);
+                    this.doubleTap = false;
                     e.preventDefault();
                 }, ~~this.longtapTime || 800);
                 this.doubleTap = this.pretouch.time && now - this.pretouch.time < 300 && ABS(this.touch.startX - this.pretouch.startX) < 30 && ABS(this.touch.startY - this.pretouch.startY) < 30 && ABS(this.touch.startTime - this.pretouch.time) < 300;
@@ -151,12 +153,13 @@
                 }
                 this._emit('swipe', e);
                 this._emit("finish", e);
-            } else {
-                self = this;
+            }
+             else {
                 if (!this.doubleTap && timestamp - this.touch.startTime < 300) {
-                    this.tapTimeout = setTimeout(function () {
-                        self._emit('tap', e);
-                        self._emit("finish", e);
+                    console.log("???");
+                    this.tapTimeout = setTimeout(()=> {
+                        this._emit('tap', e);
+                        this._emit("finish", e);
                     }, 300);
                 } else if (this.doubleTap) {
                     this._emit('dbtap', e);
@@ -202,6 +205,7 @@
             this.target.removeEventListener('touchend', this._end);
             this.target.removeEventListener('touchcancel', this._cancel);
             this.params = this.handles = this.movetouch = this.pretouch = this.touch = this.longTapTimeout = null;
+            console.log("destroy");
             return false;
         },
         set: function (setting,modifiers) {
@@ -240,7 +244,10 @@ function bindingEvent(el, binding) {
     
     var initscale = 1;
 
-    new GT(el).set(value.setting || {}, modifiers).on('tap', function (e, params) {
+    var theGt = new GT(el).set(value.setting || {}, modifiers)
+    .on('init', function(){
+        value.init && typeof value.init === 'function' && value.init(theGt);
+    }).on('tap', function (e, params) {
         value.tap && typeof value.tap === 'function' && value.tap(e, params, el);
     }).on('touch', function (e, params) {
         function getInitscale(el) {
@@ -275,6 +282,7 @@ function bindingEvent(el, binding) {
     }).on('finish', function (e, params) {
         value.finish && typeof value.finish === 'function' && value.finish(e, el);
     })
+    theGt._emit("init")
 }
 
 export default {

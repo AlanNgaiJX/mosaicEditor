@@ -3,6 +3,7 @@
     class="editor"
     id="editor"
     v-Gesture="{
+      init: e_init,
       touch: e_touch,
       tap: e_tap,
       slide: e_slide,
@@ -40,6 +41,7 @@ export default {
   },
   data() {
     return {
+      gesture: null,
       editorConfig: {
         minScale: 1,
         maxScale: 5,
@@ -53,6 +55,9 @@ export default {
     },
   },
   methods: {
+    e_init(gesture){
+      this.gesture = gesture
+    },
     e_touch(e) {
       console.log("touch editor");
     },
@@ -60,6 +65,7 @@ export default {
       console.log("tap editor");
     },
     e_slide(e, params, el) {
+      console.log("slide editor");
       // 在预览或者挪动工具中可挪动画布
       if (this.mode === "preview" || this.util === "resize") {
         if (this.editPannel.scale === this.editorConfig.minScale) {
@@ -114,8 +120,13 @@ export default {
         mouseXy: center,
       });
     },
-    e_finish() {},
+    e_finish() {
+      console.log('finish');
+    },
   },
+  beforeDestroy(){
+    this.gesture.destroy();
+  }
 };
 </script>
 
